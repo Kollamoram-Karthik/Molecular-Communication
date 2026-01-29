@@ -1,6 +1,7 @@
 %% ========================================================================
 %  3D MOLECULAR COMMUNICATION SIMULATION
 %  Point Tx to Spherical Absorbing Rx
+%  DATASET GENERATION FOR ML TRAINING
 %  ========================================================================
 
 %% ========================================================================
@@ -13,219 +14,164 @@ clc;
 
 D = 100;            % diffusion coefficient (um^2/s)
 deltat = 0.01;      % time step (s)
-T = 100;             % tot time (s)
-N = 100000;             % no of molecules
-
-% Tx (um)
-x0 = 30;            
-y0 = 30;            
-% z-direction removed for 2D simulation
+T = 100;            % tot time (s)
+N = 2000;           % no of molecules (INCREASED from 500)
 
 % Rx (at origin)
 r = 10;             
 
+% Dataset generation parameters
+num_samples = 5000;  % Number of different (x0, y0) configurations (INCREASED from 1000)
+x0_min = 15;         % Minimum x0 (> 10 um)
+x0_max = 90;         % Maximum x0
+y0_min = 15;         % Minimum y0 (> 10 um)
+y0_max = 90;         % Maximum y0
+
+% Generate random (x0, y0) pairs
+rng(42);  % For reproducibility
+x0_samples = x0_min + (x0_max - x0_min) * rand(num_samples, 1);
+y0_samples = y0_min + (y0_max - y0_min) * rand(num_samples, 1);
+
+% Preallocate storage for dataset
+dataset = cell(num_samples, 1);  % Each cell will contain data for one simulation
 
 t = 0:deltat:T;
 numSteps = length(t);
-
-
-X = zeros(numSteps, N);
-Y = zeros(numSteps, N);
-
-X(1, :) = x0;
-Y(1, :) = y0;
-% initial positions set above
-
-isAbsorbed = false(1, N);           
-absorptionTime = NaN(1, N);
-absorptionTimeIndex = NaN(1, N);
-
 sigma = sqrt(2 * D * deltat);
 
+fprintf('=== Starting Dataset Generation ===\n');
+fprintf('Total simulations: %d\n', num_samples);
+fprintf('x0 range: %.1f - %.1f um\n', x0_min, x0_max);
+fprintf('y0 range: %.1f - %.1f um\n', y0_min, y0_max);
+fprintf('Molecules per simulation: %d\n', N);
+fprintf('Time window: %.1f s\n\n', T);
+
 %% ========================================================================
-% Algorithm
+% Dataset Generation Loop
 % =========================================================================
 
-for j = 1:N
-    for i = 2:numSteps
-        if isAbsorbed(j)
-            % 
-            X(i, j) = X(i-1, j);
-            Y(i, j) = Y(i-1, j);
-        else
-            % Guassian Step
-            X(i, j) = X(i-1, j) + randn(1, 1) * sigma;
-            Y(i, j) = Y(i-1, j) + randn(1, 1) * sigma;
-            
-            % Check if absorbed or not (2D distance)
-            distance = sqrt(X(i, j)^2 + Y(i, j)^2);
-            if distance <= r
-                isAbsorbed(j) = true;
-                absorptionTime(j) = t(i);
-                absorptionTimeIndex(j) = i;
+for sample_idx = 1:num_samples
+    % Current transmitter position
+    x0 = x0_samples(sample_idx);
+    y0 = y0_samples(sample_idx);
+    
+    % Initialize molecule positions
+    X = zeros(numSteps, N);
+    Y = zeros(numSteps, N);
+    X(1, :) = x0;
+    Y(1, :) = y0;
+    
+    isAbsorbed = false(1, N);           
+    absorptionTime = NaN(1, N);
+    absorptionTimeIndex = NaN(1, N);
+    
+    % Run simulation (core algorithm unchanged)
+    for j = 1:N
+        for i = 2:numSteps
+            if isAbsorbed(j)
+                % Already absorbed, stays at absorption point
+                X(i, j) = X(i-1, j);
+                Y(i, j) = Y(i-1, j);
+            else
+                % Gaussian Step
+                X(i, j) = X(i-1, j) + randn(1, 1) * sigma;
+                Y(i, j) = Y(i-1, j) + randn(1, 1) * sigma;
+                
+                % Check if absorbed or not
+                distance = sqrt(X(i, j)^2 + Y(i, j)^2);
+                if distance <= r
+                    isAbsorbed(j) = true;
+                    absorptionTime(j) = t(i);
+                    absorptionTimeIndex(j) = i;
+                end
             end
         end
     end
-end
-
-% Display simulation summary
-fprintf('=== Simulation Complete ===\n');
-fprintf('Molecules Emitted: %d\n', N);
-fprintf('Time Window: %d\n', T);
-fprintf('Molecules Absorbed: %d\n', sum(isAbsorbed));
-fprintf('Probability: %.2f%%\n', 100 * sum(isAbsorbed) / N);
-
-%% ========================================================================
-% Compute Impact Angles (for ML data collection)
-% =========================================================================
-
-impactAngle = NaN(1, N);
-impactX = NaN(1, N);
-impactY = NaN(1, N);
-
-for j = 1:N
-    if isAbsorbed(j)
-        absIdx = absorptionTimeIndex(j);
-        impactX(j) = X(absIdx, j);
-        impactY(j) = Y(absIdx, j);
-        % Angle in radians (-pi to pi)
-        impactAngle(j) = atan2(Y(absIdx, j), X(absIdx, j));
+    
+    % Extract absorbed molecules data
+    absorbed_indices = find(isAbsorbed);
+    N0 = length(absorbed_indices);
+    
+    % Calculate impact angles for absorbed molecules
+    impact_angles = NaN(N0, 1);
+    absorption_times = NaN(N0, 1);
+    
+    for k = 1:N0
+        j = absorbed_indices(k);
+        idx = absorptionTimeIndex(j);
+        
+        % Impact angle: angle at which molecule hits receiver sphere
+        impact_angles(k) = atan2(Y(idx, j), X(idx, j));
+        absorption_times(k) = absorptionTime(j);
+    end
+    
+    % Store data for this simulation
+    dataset{sample_idx} = struct(...
+        'x0', x0, ...
+        'y0', y0, ...
+        'distance', sqrt(x0^2 + y0^2), ...
+        'N0', N0, ...
+        'absorption_times', absorption_times, ...
+        'impact_angles', impact_angles);
+    
+    % Progress update
+    if mod(sample_idx, 100) == 0
+        fprintf('Progress: %d/%d simulations complete (%.1f%%)\n', ...
+            sample_idx, num_samples, 100*sample_idx/num_samples);
     end
 end
 
-%% ========================================================================
-% X vs T
-% =========================================================================
+% Display dataset summary
+fprintf('\n=== Dataset Generation Complete ===\n');
+fprintf('Total samples: %d\n', num_samples);
+fprintf('Average N0: %.1f molecules\n', mean(cellfun(@(x) x.N0, dataset)));
+fprintf('Min N0: %d molecules\n', min(cellfun(@(x) x.N0, dataset)));
+fprintf('Max N0: %d molecules\n', max(cellfun(@(x) x.N0, dataset)));
 
-figure('Name', 'X Position vs Time', 'NumberTitle', 'off');
-hold on;
-grid on;
-
-for j = 1:N
-    if isAbsorbed(j)
-        % Plot trajectory up to absorption in red, then green
-        absIdx = absorptionTimeIndex(j);
-        plot(t(1:absIdx), X(1:absIdx, j), 'r-', 'LineWidth', 0.5);
-        plot(t(absIdx:end), X(absIdx:end, j), 'g-', 'LineWidth', 1.5);
-        % Mark absorption point
-        plot(t(absIdx), X(absIdx, j), 'go', 'MarkerSize', 6, 'MarkerFaceColor', 'g');
-    else
-        % Non-absorbed molecule stays red
-        plot(t, X(:, j), 'r-', 'LineWidth', 0.5);
-    end
-end
-
-xlabel('Time (s)', 'FontSize', 12);
-ylabel('X Position (\mum)', 'FontSize', 12);
-title('X Position vs Time for All Molecules', 'FontSize', 14);
-legend({'Red: Not absorbed', 'Green: Absorbed'}, 'Location', 'best');
-hold off;
+% Save dataset
+save('molecular_comm_dataset.mat', 'dataset', 'x0_samples', 'y0_samples', ...
+     'D', 'deltat', 'T', 'N', 'r', '-v7.3');
+fprintf('\nDataset saved to: molecular_comm_dataset.mat\n');
 
 %% ========================================================================
-% Y vs T 
+% OPTIONAL: Visualization of Sample Simulation
 % =========================================================================
+% Uncomment this section to visualize a single random sample from the dataset
 
-figure('Name', 'Y Position vs Time', 'NumberTitle', 'off');
-hold on;
-grid on;
-
-for j = 1:N
-    if isAbsorbed(j)
-        absIdx = absorptionTimeIndex(j);
-        plot(t(1:absIdx), Y(1:absIdx, j), 'r-', 'LineWidth', 0.5);
-        plot(t(absIdx:end), Y(absIdx:end, j), 'g-', 'LineWidth', 1.5);
-        plot(t(absIdx), Y(absIdx, j), 'go', 'MarkerSize', 6, 'MarkerFaceColor', 'g');
-    else
-        plot(t, Y(:, j), 'r-', 'LineWidth', 0.5);
-    end
-end
-
-xlabel('Time (s)', 'FontSize', 12);
-ylabel('Y Position (\mum)', 'FontSize', 12);
-title('Y Position vs Time for All Molecules', 'FontSize', 14);
-legend({'Red: Not absorbed', 'Green: Absorbed'}, 'Location', 'best');
-hold off;
-
-
-%% ========================================================================
-% X vs Y
-% =========================================================================
-
-figure('Name', 'X-Y Plane Animation', 'NumberTitle', 'off');
-
-xyLimit = max([abs(x0), abs(y0)]) * 1.3;
-
-theta_circle = linspace(0, 2*pi, 100);
-rx_circle = r * cos(theta_circle);
-ry_circle = r * sin(theta_circle);
-
-% Animation loop
-for i = 1:numSteps
-    clf;
-    hold on;
-    grid on;
-    axis equal;
-    xlim([x0/2 - xyLimit, x0/2 + xyLimit]);
-    ylim([y0/2 - xyLimit, y0/2 + xyLimit]);
-    
-    % Draw receiver (blue circle)
-    fill(rx_circle, ry_circle, 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'b', 'LineWidth', 2);
-    
-    % Plot current position of each molecule
-    for j = 1:N
-        if isAbsorbed(j) && i >= absorptionTimeIndex(j)
-            % Absorbed molecule - green
-            plot(X(i, j), Y(i, j), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g');
-        else
-            % Not yet absorbed - red
-            plot(X(i, j), Y(i, j), 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
-        end
-    end
-    
-    % Mark transmitter location
-    plot(x0, y0, 'k^', 'MarkerSize', 10, 'MarkerFaceColor', 'k');
-    
-    xlabel('X Position (\mum)', 'FontSize', 12);
-    ylabel('Y Position (\mum)', 'FontSize', 12);
-    title(sprintf('X-Y Plane | Time: %.2f s | Absorbed: %d/%d', t(i), sum(isAbsorbed & (absorptionTimeIndex <= i)), N), 'FontSize', 14);
-    
-    drawnow;
-    hold off;
-end
-% Y-Z and X-Z plane animations removed for 2D simulation
-
-%% ========================================================================
-% Receiver's POV
-% =========================================================================
-
-figure('Name', 'Receiver Response', 'NumberTitle', 'off');
-
-cumulativeAbsorbed = zeros(1, numSteps);
-
-for i = 1:numSteps
-    cumulativeAbsorbed(i) = sum(absorptionTimeIndex <= i);
-end
-
-subplot(2, 1, 1);
-plot(t, cumulativeAbsorbed, 'b-', 'LineWidth', 2);
-grid on;
-xlabel('Time (s)', 'FontSize', 12);
-ylabel('Cumulative Molecules Absorbed', 'FontSize', 12);
-title('Cumulative Molecules Received vs Time', 'FontSize', 14);
-ylim([0, max(cumulativeAbsorbed) + 1]);
-
-subplot(2, 1, 2);
-if sum(isAbsorbed) > 0
-    validAbsorptionTimes = absorptionTime(~isnan(absorptionTime));
-    histogram(validAbsorptionTimes, 20, 'FaceColor', 'g', 'EdgeColor', 'k');
-    xlabel('Time (s)', 'FontSize', 12);
-    ylabel('Number of Molecules', 'FontSize', 12);
-    title('Distribution of Absorption Times', 'FontSize', 14);
-    grid on;
-else
-    text(0.5, 0.5, 'No molecules absorbed', 'HorizontalAlignment', 'center', ...
-        'FontSize', 14, 'Units', 'normalized');
-    title('Distribution of Absorption Times', 'FontSize', 14);
-end
+% sample_to_visualize = randi(num_samples);
+% sample_data = dataset{sample_to_visualize};
+% 
+% fprintf('\n=== Visualizing Sample %d ===\n', sample_to_visualize);
+% fprintf('Position: (%.2f, %.2f) um\n', sample_data.x0, sample_data.y0);
+% fprintf('Distance: %.2f um\n', sample_data.distance);
+% fprintf('Molecules absorbed: %d\n', sample_data.N0);
+% 
+% if sample_data.N0 > 0
+%     figure('Name', sprintf('Sample %d Visualization', sample_to_visualize), 'NumberTitle', 'off');
+%     
+%     % Plot impact angles on unit circle
+%     subplot(1, 2, 1);
+%     theta_circle = linspace(0, 2*pi, 100);
+%     plot(cos(theta_circle), sin(theta_circle), 'k-', 'LineWidth', 2);
+%     hold on;
+%     for k = 1:sample_data.N0
+%         angle = sample_data.impact_angles(k);
+%         plot(cos(angle), sin(angle), 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+%     end
+%     axis equal;
+%     grid on;
+%     xlabel('X', 'FontSize', 12);
+%     ylabel('Y', 'FontSize', 12);
+%     title('Impact Angles on Receiver Sphere', 'FontSize', 14);
+%     hold off;
+%     
+%     % Plot absorption time histogram
+%     subplot(1, 2, 2);
+%     histogram(sample_data.absorption_times, 20, 'FaceColor', 'g', 'EdgeColor', 'k');
+%     xlabel('Time (s)', 'FontSize', 12);
+%     ylabel('Number of Molecules', 'FontSize', 12);
+%     title('Absorption Time Distribution', 'FontSize', 14);
+%     grid on;
+% end
 
 %%
