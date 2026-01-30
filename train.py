@@ -227,12 +227,12 @@ def main():
     model, history = train_model(
         model, train_data, val_data,
         num_epochs=500,
-        batch_size=32,
-        lr=0.0005,
-        patience=50,
+        batch_size=64,  # Larger batch for stability
+        lr=0.001,
+        patience=80,  # More patience
         device=DEVICE,
         augment=True,
-        num_augmentations=4  # 4x augmentation
+        num_augmentations=4
     )
     
     # Save training history plot

@@ -6,9 +6,13 @@ import numpy as np
 import h5py
 
 
-def load_dataset(mat_path):
+def load_dataset(mat_path, load_heatmaps=False):
     """
     Load molecular communication dataset from MATLAB .mat file (v7.3 / HDF5 format).
+    
+    Args:
+        mat_path: Path to the .mat file
+        load_heatmaps: If True, load heatmap data for CNN training
     
     Returns:
         List of dicts, each containing:
@@ -16,6 +20,7 @@ def load_dataset(mat_path):
         - distance: distance from origin
         - absorption_times: array of absorption times
         - impact_angles: array of impact angles
+        - heatmap: 2D array (time_bins x angle_bins) if load_heatmaps=True
     """
     samples = []
     
@@ -40,14 +45,21 @@ def load_dataset(mat_path):
                 absorption_times = np.array([])
                 impact_angles = np.array([])
             
-            samples.append({
+            sample_dict = {
                 'x0': x0,
                 'y0': y0,
                 'distance': distance,
                 'N0': n0,
                 'absorption_times': absorption_times,
                 'impact_angles': impact_angles
-            })
+            }
+            
+            # Load heatmap if requested
+            if load_heatmaps and 'heatmap' in sample_group:
+                heatmap = np.array(sample_group['heatmap'])
+                sample_dict['heatmap'] = heatmap
+            
+            samples.append(sample_dict)
     
     return samples
 

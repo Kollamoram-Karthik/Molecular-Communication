@@ -272,7 +272,7 @@ class CorrectionNetwork(nn.Module):
 class PhysicsInformedModel:
     """Complete model combining physics-based feature extraction with neural network."""
     
-    def __init__(self, hidden_dims=[128, 128, 64], dropout=0.3, n_molecules=500):
+    def __init__(self, hidden_dims=[128, 128, 64], dropout=0.3, n_molecules=2000):
         self.n_molecules = n_molecules
         self.feature_extractor = PhysicsFeatureExtractor(n_molecules=n_molecules)
         self.network = CorrectionNetwork(

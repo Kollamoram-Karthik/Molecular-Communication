@@ -27,6 +27,14 @@ x0_max = 90;         % Maximum x0
 y0_min = 15;         % Minimum y0 (> 10 um)
 y0_max = 90;         % Maximum y0
 
+% Heatmap generation parameters
+time_bins = 100;     % Number of time bins (high resolution)
+angle_bins = 100;    % Number of angle bins (high resolution)
+time_min = 0;        % Minimum time (s)
+time_max = T;        % Maximum time (s)
+angle_min = -pi;     % Minimum angle (radians)
+angle_max = pi;      % Maximum angle (radians)
+
 % Generate random (x0, y0) pairs
 rng(42);  % For reproducibility
 x0_samples = x0_min + (x0_max - x0_min) * rand(num_samples, 1);
@@ -44,7 +52,8 @@ fprintf('Total simulations: %d\n', num_samples);
 fprintf('x0 range: %.1f - %.1f um\n', x0_min, x0_max);
 fprintf('y0 range: %.1f - %.1f um\n', y0_min, y0_max);
 fprintf('Molecules per simulation: %d\n', N);
-fprintf('Time window: %.1f s\n\n', T);
+fprintf('Time window: %.1f s\n', T);
+fprintf('Heatmap resolution: %d x %d (time x angle)\n\n', time_bins, angle_bins);
 
 %% ========================================================================
 % Dataset Generation Loop
@@ -105,6 +114,10 @@ for sample_idx = 1:num_samples
         absorption_times(k) = absorptionTime(j);
     end
     
+    % Generate heatmap for this sample
+    heatmap = generate_heatmap(absorption_times, impact_angles, ...
+        time_bins, angle_bins, time_min, time_max, angle_min, angle_max);
+    
     % Store data for this simulation
     dataset{sample_idx} = struct(...
         'x0', x0, ...
@@ -112,7 +125,8 @@ for sample_idx = 1:num_samples
         'distance', sqrt(x0^2 + y0^2), ...
         'N0', N0, ...
         'absorption_times', absorption_times, ...
-        'impact_angles', impact_angles);
+        'impact_angles', impact_angles, ...
+        'heatmap', heatmap);
     
     % Progress update
     if mod(sample_idx, 100) == 0
@@ -127,10 +141,12 @@ fprintf('Total samples: %d\n', num_samples);
 fprintf('Average N0: %.1f molecules\n', mean(cellfun(@(x) x.N0, dataset)));
 fprintf('Min N0: %d molecules\n', min(cellfun(@(x) x.N0, dataset)));
 fprintf('Max N0: %d molecules\n', max(cellfun(@(x) x.N0, dataset)));
+fprintf('Heatmap shape: %d x %d\n', time_bins, angle_bins);
 
 % Save dataset
 save('molecular_comm_dataset.mat', 'dataset', 'x0_samples', 'y0_samples', ...
-     'D', 'deltat', 'T', 'N', 'r', '-v7.3');
+     'D', 'deltat', 'T', 'N', 'r', 'time_bins', 'angle_bins', ...
+     'time_min', 'time_max', 'angle_min', 'angle_max', '-v7.3');
 fprintf('\nDataset saved to: molecular_comm_dataset.mat\n');
 
 %% ========================================================================
@@ -175,3 +191,44 @@ fprintf('\nDataset saved to: molecular_comm_dataset.mat\n');
 % end
 
 %%
+
+%% ========================================================================
+% HEATMAP GENERATION FUNCTION
+% =========================================================================
+function heatmap = generate_heatmap(absorption_times, impact_angles, ...
+    time_bins, angle_bins, time_min, time_max, angle_min, angle_max)
+    % Generate 2D histogram (heatmap) of absorption times vs impact angles
+    % 
+    % Inputs:
+    %   absorption_times: Vector of absorption times (seconds)
+    %   impact_angles: Vector of impact angles (radians, -pi to pi)
+    %   time_bins: Number of bins for time axis
+    %   angle_bins: Number of bins for angle axis
+    %   time_min, time_max: Time range for binning
+    %   angle_min, angle_max: Angle range for binning
+    %
+    % Output:
+    %   heatmap: 2D matrix of size [time_bins x angle_bins]
+    %            where each element contains the count of molecules
+    %            that arrived at that specific time-angle bin
+    
+    % Handle empty input (no molecules absorbed)
+    if isempty(absorption_times) || isempty(impact_angles)
+        heatmap = zeros(time_bins, angle_bins);
+        return;
+    end
+    
+    % Define bin edges
+    time_edges = linspace(time_min, time_max, time_bins + 1);
+    angle_edges = linspace(angle_min, angle_max, angle_bins + 1);
+    
+    % Generate 2D histogram using histcounts2
+    % Note: histcounts2 returns counts in format [length(xedges)-1, length(yedges)-1]
+    % We use absorption_times as X (rows) and impact_angles as Y (columns)
+    heatmap = histcounts2(absorption_times, impact_angles, time_edges, angle_edges);
+    
+    % heatmap is now [time_bins x angle_bins] where:
+    % - Rows represent time bins (0 to T)
+    % - Columns represent angle bins (-pi to pi)
+    % - Each element is the count of molecules in that bin
+end
