@@ -1,0 +1,8 @@
+mae_x: 5.3240
+mae_y: 5.4654
+mae_euclidean: 8.1471
+median_euclidean: 6.5958
+std_euclidean: 5.7922
+within_1um: 1.4667
+within_2um: 7.7333
+within_5um: 35.8667

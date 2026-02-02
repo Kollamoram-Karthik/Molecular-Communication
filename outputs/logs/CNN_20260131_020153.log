@@ -1,0 +1,17 @@
+<frozen runpy>:128: RuntimeWarning: 'models.cnn.train' found in sys.modules after import of package 'models.cnn', but prior to execution of 'models.cnn.train'; this may result in unpredictable behaviour
+============================================================
+CNN MODEL TRAINING
+============================================================
+Device: cpu
+
+Loading data from: data/molecular_comm_dataset.mat
+Total samples: 5000
+Heatmap shape: (100, 100)
+Train: 3500, Val: 750, Test: 750
+
+Model parameters: 33,890
+
+============================================================
+Training started
+============================================================
+Training:   0%|          | 0/100 [00:00<?, ?it/s]Training:   1%|          | 1/100 [00:12<20:07, 12.20s/it]Training:   2%|▏         | 2/100 [00:25<20:42, 12.68s/it]Training:   3%|▎         | 3/100 [00:38<20:36, 12.75s/it]Training:   4%|▍         | 4/100 [00:50<20:03, 12.53s/it]Training:   5%|▌         | 5/100 [01:02<19:41, 12.44s/it]Training:   6%|▌         | 6/100 [01:14<19:29, 12.44s/it]Training:   7%|▋         | 7/100 [01:29<20:21, 13.14s/it]Training:   8%|▊         | 8/100 [01:42<19:52, 12.96s/it]Training:   9%|▉         | 9/100 [02:05<24:23, 16.08s/it]                                                         Training:   9%|▉         | 9/100 [02:18<24:23, 16.08s/it]Training:  10%|█         | 10/100 [02:18<23:07, 15.42s/it]
