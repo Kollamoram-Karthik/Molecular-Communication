@@ -1,0 +1,63 @@
+<frozen runpy>:128: RuntimeWarning: 'models.distance_mlp.train' found in sys.modules after import of package 'models.distance_mlp', but prior to execution of 'models.distance_mlp.train'; this may result in unpredictable behaviour
+============================================================
+DISTANCE MLP MODEL TRAINING
+============================================================
+
+Loading data from: data/molecular_comm_dataset.mat
+Total samples: 5000
+
+Distance range: 22.1 - 126.0 μm
+Train: 3500, Val: 750, Test: 750
+
+Fitting physics calibration...
+Training samples (with augmentation): 10500
+
+============================================================
+Training started
+============================================================
+Epoch  20: train=0.002981, val=0.000660
+Epoch  40: train=0.002744, val=0.000515
+Epoch  60: train=0.002740, val=0.000873
+
+Early stopping at epoch 65
+
+============================================================
+Final Evaluation on Test Set
+============================================================
+
+============================================================
+TEST SET METRICS
+============================================================
+Error Statistics:
+  MAE:    2.437 μm
+  RMSE:   3.079 μm
+  Median: 2.043 μm
+  Std:    1.881 μm
+  P90:    5.069 μm
+Accuracy:
+  Within 2 μm:  48.9%
+  Within 5 μm:  89.2%
+  Within 10 μm: 100.0%
+============================================================
+
+============================================================
+PHYSICS BASELINE
+============================================================
+Error Statistics:
+  MAE:    2.527 μm
+  RMSE:   3.353 μm
+  Median: 1.912 μm
+  Std:    2.204 μm
+  P90:    5.384 μm
+Accuracy:
+  Within 2 μm:  52.3%
+  Within 5 μm:  87.6%
+  Within 10 μm: 98.9%
+============================================================
+
+NN improvement over physics: 3.6%
+
+Model saved to: outputs/distance_mlp/model.pt
+Plots saved to: outputs/distance_mlp/training_results.png
+
+Training complete!

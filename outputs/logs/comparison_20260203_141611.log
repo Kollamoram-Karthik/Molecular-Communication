@@ -1,0 +1,36 @@
+================================================================================
+MODEL COMPARISON ANALYSIS
+================================================================================
+
+Loading models...
+✓ Loaded Feature MLP
+✓ Loaded Distance MLP
+✓ Loaded CNN
+✓ Loaded DeepSets
+
+Loading test data...
+Test samples: 750
+
+Evaluating models...
+
+================================================================================
+MODEL COMPARISON - Position Prediction (x0, y0)
+================================================================================
+Metric                       feature_mlp            cnn       deepsets
+--------------------------------------------------------------------------------
+MAE X (μm)                          3.25           5.17           3.50
+MAE Y (μm)                          3.32           5.94           3.41
+Mean Dist Error (μm)                5.04           8.47           5.32
+Median Dist Error (μm)              4.07           7.08           4.45
+P90 Dist Error (μm)                 9.96          16.59           9.90
+Within 5 μm (%)                    59.87          31.60          58.93
+Within 10 μm (%)                   90.13          69.07          90.53
+
+--------------------------------------------------------------------------------
+Distance MLP (distance-only prediction):
+  MAE: 2.53 μm, RMSE: 3.15 μm, Within 5μm: 89.7%
+================================================================================
+
+Comparison plot saved to: analysis/model_comparison.png
+
+Analysis complete!

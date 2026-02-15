@@ -15,7 +15,7 @@ clc;
 D = 100;            % diffusion coefficient (um^2/s)
 deltat = 0.01;      % time step (s)
 T = 100;            % tot time (s)
-N = 2000;           % no of molecules (INCREASED from 500)
+N = 2000;           % no of molecules
 
 % Rx (at origin)
 r = 10;             

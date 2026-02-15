@@ -123,6 +123,22 @@ def train(
     print("\nFitting physics calibration...")
     model.fit_physics(train_samples)
     
+    # Print the calibrated polynomial
+    coeffs = model.feature_extractor.distance_calibration
+    degree = len(coeffs) - 1
+    terms = []
+    for i, coeff in enumerate(coeffs):
+        power = degree - i
+        if power > 1:
+            terms.append(f"{coeff:.4f}·√t^{power}")
+        elif power == 1:
+            terms.append(f"{coeff:.4f}·√t")
+        else:
+            terms.append(f"{coeff:.4f}")
+    poly_str = " + ".join(terms).replace("+ -", "- ")
+    print(f"Physics polynomial (degree {degree}): d = {poly_str}")
+    print(f"  where d is distance (μm) and t is median absorption time")
+    
     # Prepare datasets
     X_train, y_train = prepare_data(train_samples, model, augment=True, num_augmentations=num_augmentations)
     X_val, y_val = prepare_data(val_samples, model, augment=False)

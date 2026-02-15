@@ -52,7 +52,7 @@ class TimeFeatureExtractor:
                 distances.append(s['distance'])
         
         sqrt_times = np.sqrt(times_median)
-        self.distance_calibration = np.polyfit(sqrt_times, distances, deg=2)
+        self.distance_calibration = np.polyfit(sqrt_times, distances, deg=15)
         
     def extract_features(self, absorption_times):
         """

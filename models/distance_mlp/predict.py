@@ -59,21 +59,24 @@ def predict_samples(model_path, data_path, num_samples):
     np.random.seed(42)
     indices = np.random.choice(len(test_data), min(num_samples, len(test_data)), replace=False)
     
-    print(f"\n{'Sample':>8} {'Actual':>10} {'Predicted':>10} {'Physics':>10} {'Error':>10}")
-    print("-"*60)
+    print(f"\n{'Sample':>8} {'Actual':>10} {'Predicted':>10} {'Physics':>10} {'NN Error':>10} {'Phys Error':>12}")
+    print("-"*72)
     
     errors = []
+    physics_errors = []
     for idx in indices:
         s = test_data[idx]
         pred = model.predict(s)
         physics = model.get_physics_estimate(s)
         actual = s['distance']
         error = abs(pred - actual)
+        physics_error = abs(physics - actual)
         errors.append(error)
-        print(f"{idx:>8} {actual:>10.2f} {pred:>10.2f} {physics:>10.2f} {error:>10.2f}")
+        physics_errors.append(physics_error)
+        print(f"{idx:>8} {actual:>10.2f} {pred:>10.2f} {physics:>10.2f} {error:>10.2f} {physics_error:>12.2f}")
     
-    print("-"*60)
-    print(f"{'Mean':>8} {'':>10} {'':>10} {'':>10} {np.mean(errors):>10.2f}")
+    print("-"*72)
+    print(f"{'Mean':>8} {'':>10} {'':>10} {'':>10} {np.mean(errors):>10.2f} {np.mean(physics_errors):>12.2f}")
 
 
 def predict_custom(model_path, times):
